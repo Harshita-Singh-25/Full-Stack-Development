@@ -1,6 +1,6 @@
 // src/hooks/rooms/useRooms.js
 import { useState, useEffect } from 'react';
-import { useAuth } from '../auth/useAuth';
+import { useAuth } from './useAuth';
 
 export function useRooms() {
   const [rooms, setRooms] = useState([]);

@@ -1,8 +1,9 @@
-// src/pages/Auth.jsx
+// src/pages/Auth.jsx - Updated to use useAuth hook
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/Button';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../contexts/AuthContext';
+
 export default function Auth() {
   const [isLogin, setIsLogin] = useState(true);
   const [formData, setFormData] = useState({
@@ -11,11 +12,13 @@ export default function Auth() {
     confirmPassword: '',
     username: ''
   });
-  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   
-  const { login, signup } = useAuth();
+  // Using custom useAuth hook
+  const { login, signup, error } = useAuth();
   const navigate = useNavigate();
+
+  console.log('Auth: Component rendered, isLogin:', isLogin);
 
   const handleChange = (e) => {
     setFormData({
@@ -26,16 +29,18 @@ export default function Auth() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
     setLoading(true);
+    console.log('Auth: Form submitted, isLogin:', isLogin);
 
     try {
       if (isLogin) {
-        // Login logic
+        // Login logic using context
+        console.log('Auth: Attempting login for:', formData.email);
         await login({ 
           email: formData.email, 
           username: formData.email.split('@')[0] 
         });
+        console.log('Auth: Login successful, navigating to dashboard');
         navigate('/dashboard');
       } else {
         // Signup validation
@@ -43,15 +48,17 @@ export default function Auth() {
           throw new Error("Passwords don't match");
         }
         
+        console.log('Auth: Attempting signup for:', formData.email);
         await signup({ 
           email: formData.email, 
-          username: formData.username,
-          joinedDate: new Date().toISOString()
+          username: formData.username
         });
+        console.log('Auth: Signup successful, navigating to dashboard');
         navigate('/dashboard');
       }
     } catch (err) {
-      setError(err.message);
+      console.error('Auth: Authentication error:', err.message);
+      // Error is handled by context
     } finally {
       setLoading(false);
     }
@@ -66,11 +73,17 @@ export default function Auth() {
           </h2>
         </div>
         
+        {/* Show authentication errors from context */}
         {error && (
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
             {error}
           </div>
         )}
+        
+        {/* Debug info for lab demonstration */}
+        <div className="bg-blue-50 border border-blue-200 text-blue-700 px-3 py-2 rounded text-sm">
+          <strong>🔧 Hook Debug:</strong> Using useAuth() hook for authentication state management
+        </div>
         
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="rounded-md shadow-sm space-y-4">
@@ -185,7 +198,7 @@ export default function Auth() {
           <button 
             onClick={() => {
               setIsLogin(!isLogin);
-              setError('');
+              // Clear any existing errors when switching forms
             }}
             className="font-medium text-indigo-600 hover:text-indigo-500"
           >

@@ -1,13 +1,50 @@
-// src/pages/StudyRoom.jsx
+// src/pages/StudyRoom.jsx - Enhanced with Custom Hooks
 import { useParams } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
+import { useAuth } from '../contexts/AuthContext';
+import { useTimer } from '../hooks/useTimer';
+import { useChat } from '../hooks/useChat';
+import { useOnlineUsers } from '../hooks/useOnlineUsers';
+import { useStudyStats } from '../hooks/useStudyStats';
+import { useLocalStorage } from '../hooks/useLocalStorage';
+import { Link } from 'react-router-dom';
 
 export default function StudyRoom() {
   const { id } = useParams();
+  const { currentUser } = useAuth();
+  const { stats, addStudySession } = useStudyStats();
   
-  // Dummy room data based on ID
+  // Custom hooks in action
+  const { 
+    time, 
+    isActive, 
+    isCompleted, 
+    progress, 
+    start, 
+    pause, 
+    reset, 
+    formattedTime 
+  } = useTimer(1500); // 25 minutes
+  
+  const { 
+    messages, 
+    connectionStatus, 
+    sendMessage, 
+    messagesEndRef 
+  } = useChat(id);
+  
+  const { onlineUsers, userCount } = useOnlineUsers(id);
+  
+  // Local storage for room preferences
+  const [roomPreferences, setRoomPreferences] = useLocalStorage(`room_prefs_${id}`, {
+    notifications: true,
+    autoScroll: true,
+    showTimestamps: true
+  });
+
+  // Room data based on ID
   const roomData = {
     1: {
       name: 'Data Structures & Algorithms',
@@ -27,56 +64,35 @@ export default function StudyRoom() {
   };
 
   const room = roomData[id] || roomData[1];
-
-  const [messages, setMessages] = useState([
-    { id: 1, sender: 'Alex Johnson', text: 'Good morning everyone! Today we\'ll be focusing on binary trees. Has everyone completed yesterday\'s practice problems?', time: '09:30 AM', avatar: 'AJ' },
-    { id: 2, sender: 'Sam Wilson', text: 'Yes! I solved the binary tree traversal problems. The iterative approach was tricky at first.', time: '09:32 AM', avatar: 'SW' },
-    { id: 3, sender: 'Taylor Smith', text: 'I\'m still struggling with the recursive approach. Can someone explain the base case again?', time: '09:35 AM', avatar: 'TS' },
-    { id: 4, sender: 'Alex Johnson', text: 'Sure! The base case is when we reach a null node. Let me share a code snippet...', time: '09:37 AM', avatar: 'AJ' },
-    { id: 5, sender: 'Maria Garcia', text: 'I\'ve added a visualization tool to our resources. It really helps understand tree traversals!', time: '09:40 AM', avatar: 'MG' },
-  ]);
-
   const [newMessage, setNewMessage] = useState('');
-
-  const members = [
-    { id: 1, name: 'Alex Johnson', role: 'Moderator', status: 'online', avatar: 'AJ' },
-    { id: 2, name: 'Sam Wilson', role: 'Member', status: 'online', avatar: 'SW' },
-    { id: 3, name: 'Taylor Smith', role: 'Member', status: 'online', avatar: 'TS' },
-    { id: 4, name: 'Maria Garcia', role: 'Member', status: 'away', avatar: 'MG' },
-    { id: 5, name: 'David Lee', role: 'Member', status: 'offline', avatar: 'DL' },
-    { id: 6, name: 'Sarah Brown', role: 'Member', status: 'online', avatar: 'SB' },
-  ];
-
-  const resources = [
-    { id: 1, name: 'Binary Tree Visualizer', url: '#', addedBy: 'Maria', type: 'tool', icon: '🔧' },
-    { id: 2, name: 'DSA Cheat Sheet', url: '#', addedBy: 'Alex', type: 'document', icon: '📄' },
-    { id: 3, name: 'Tree Traversal Practice', url: '#', addedBy: 'Sam', type: 'exercise', icon: '💻' },
-    { id: 4, name: 'Big-O Complexity Guide', url: '#', addedBy: 'Taylor', type: 'reference', icon: '📊' },
-  ];
-
   const [goals] = useState([
     { id: 1, text: 'Solve 2 tree problems', completed: true },
     { id: 2, text: 'Understand DFS vs BFS', completed: false },
     { id: 3, text: 'Implement binary search', completed: false },
   ]);
 
-  const [studyTime, setStudyTime] = useState({ minutes: 25, seconds: 0 });
-  const [timerActive, setTimerActive] = useState(false);
+  // Handle timer completion
+  useEffect(() => {
+    if (isCompleted) {
+      addStudySession(25); // Add 25 minutes to study stats
+      console.log('Pomodoro session completed!');
+      // Could show notification here
+    }
+  }, [isCompleted, addStudySession]);
 
   const handleSendMessage = (e) => {
     e.preventDefault();
     if (!newMessage.trim()) return;
     
-    const newMsg = {
-      id: Date.now(),
-      sender: 'You',
-      text: newMessage,
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      avatar: 'YU'
-    };
-    
-    setMessages([...messages, newMsg]);
+    sendMessage(newMessage);
     setNewMessage('');
+  };
+
+  const togglePreference = (key) => {
+    setRoomPreferences(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
   };
 
   const getStatusColor = (status) => {
@@ -90,14 +106,29 @@ export default function StudyRoom() {
 
   return (
     <div className="container mx-auto px-4 py-6">
+      {/* Debug Info - Show in lab to demonstrate hooks */}
+      <div className="mb-4 p-3 bg-blue-50 rounded-lg text-sm">
+        <h4 className="font-semibold text-blue-800 mb-2">🔧 Hooks Debug Info (Remove in production)</h4>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-blue-600">
+          <div>Timer: {formattedTime}</div>
+          <div>Chat Status: {connectionStatus}</div>
+          <div>Online Users: {userCount}</div>
+          <div>Study Time: {stats.totalStudyTime}min</div>
+        </div>
+      </div>
+
       <div className="flex flex-col lg:flex-row gap-6">
         {/* Left Sidebar */}
         <div className="lg:w-1/4 space-y-6">
           {/* Room Info */}
           <div className="bg-white rounded-xl shadow p-4">
             <div className="flex items-center space-x-2 mb-2">
-              <div className="w-3 h-3 bg-green-400 rounded-full"></div>
-              <span className="text-sm text-green-600 font-medium">Live Session</span>
+              <div className={`w-3 h-3 rounded-full ${
+                connectionStatus === 'Connected' ? 'bg-green-400' : 'bg-yellow-400'
+              }`}></div>
+              <span className="text-sm text-green-600 font-medium">
+                {connectionStatus === 'Connected' ? 'Live Session' : 'Connecting...'}
+              </span>
             </div>
             <h2 className="text-xl font-bold mb-1">{room.name}</h2>
             <p className="text-indigo-600 font-medium mb-2">{room.topic}</p>
@@ -108,14 +139,14 @@ export default function StudyRoom() {
             </div>
           </div>
           
-          {/* Members */}
+          {/* Members - Using custom hook data */}
           <div className="bg-white rounded-xl shadow p-4">
             <h3 className="font-semibold mb-3 flex items-center justify-between">
-              Members ({members.length})
-              <span className="text-sm text-green-600">{members.filter(m => m.status === 'online').length} online</span>
+              Members ({onlineUsers.length})
+              <span className="text-sm text-green-600">{userCount} online</span>
             </h3>
             <div className="space-y-3 max-h-64 overflow-y-auto">
-              {members.map(member => (
+              {onlineUsers.map(member => (
                 <div key={member.id} className="flex items-center space-x-3">
                   <div className="relative">
                     <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 text-sm font-medium">
@@ -125,45 +156,58 @@ export default function StudyRoom() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{member.name}</p>
-                    <p className="text-xs text-gray-500">{member.role}</p>
+                    <p className="text-xs text-gray-500 capitalize">{member.status}</p>
                   </div>
                 </div>
               ))}
             </div>
           </div>
           
-          {/* Resources */}
+          {/* Room Preferences - Using useLocalStorage */}
           <div className="bg-white rounded-xl shadow p-4">
-            <div className="flex justify-between items-center mb-3">
-              <h3 className="font-semibold">Resources</h3>
-              <Button variant="ghost" size="sm">+ Add</Button>
-            </div>
-            <div className="space-y-2">
-              {resources.map(resource => (
-                <a 
-                  key={resource.id} 
-                  href={resource.url} 
-                  className="flex items-start space-x-3 p-2 hover:bg-gray-50 rounded text-sm group"
-                >
-                  <span className="text-lg">{resource.icon}</span>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium truncate group-hover:text-indigo-600">{resource.name}</p>
-                    <p className="text-xs text-gray-500">Added by {resource.addedBy}</p>
-                  </div>
-                </a>
-              ))}
+            <h3 className="font-semibold mb-3">Room Settings</h3>
+            <div className="space-y-3">
+              <label className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  checked={roomPreferences.notifications}
+                  onChange={() => togglePreference('notifications')}
+                  className="w-4 h-4 text-indigo-600 rounded"
+                />
+                <span className="text-sm">Enable notifications</span>
+              </label>
+              <label className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  checked={roomPreferences.autoScroll}
+                  onChange={() => togglePreference('autoScroll')}
+                  className="w-4 h-4 text-indigo-600 rounded"
+                />
+                <span className="text-sm">Auto-scroll chat</span>
+              </label>
+              <label className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  checked={roomPreferences.showTimestamps}
+                  onChange={() => togglePreference('showTimestamps')}
+                  className="w-4 h-4 text-indigo-600 rounded"
+                />
+                <span className="text-sm">Show timestamps</span>
+              </label>
             </div>
           </div>
         </div>
         
-        {/* Main Chat Area */}
+        {/* Main Chat Area - Using useChat hook */}
         <div className="lg:w-2/4 bg-white rounded-xl shadow flex flex-col">
           <div className="p-4 border-b">
             <h3 className="font-semibold flex items-center justify-between">
               Discussion
               <div className="flex items-center space-x-2 text-sm text-gray-500">
-                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                <span>6 active</span>
+                <div className={`w-2 h-2 rounded-full animate-pulse ${
+                  connectionStatus === 'Connected' ? 'bg-green-400' : 'bg-yellow-400'
+                }`}></div>
+                <span>{connectionStatus}</span>
               </div>
             </h3>
           </div>
@@ -178,17 +222,16 @@ export default function StudyRoom() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center space-x-2 mb-1">
                       <p className="font-medium text-gray-900">{message.sender}</p>
-                      <p className="text-xs text-gray-500">{message.time}</p>
+                      {roomPreferences.showTimestamps && (
+                        <p className="text-xs text-gray-500">{message.time}</p>
+                      )}
                     </div>
                     <p className="text-gray-800 leading-relaxed">{message.text}</p>
-                    <div className="flex items-center space-x-4 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button className="text-xs text-gray-400 hover:text-indigo-600">Reply</button>
-                      <button className="text-xs text-gray-400 hover:text-indigo-600">React</button>
-                    </div>
                   </div>
                 </div>
               </div>
             ))}
+            <div ref={messagesEndRef} />
           </div>
           
           <form onSubmit={handleSendMessage} className="p-4 border-t flex space-x-2">
@@ -197,8 +240,14 @@ export default function StudyRoom() {
               onChange={(e) => setNewMessage(e.target.value)}
               placeholder="Type your message..."
               className="flex-grow"
+              disabled={connectionStatus !== 'Connected'}
             />
-            <Button type="submit">Send</Button>
+            <Button 
+              type="submit" 
+              disabled={connectionStatus !== 'Connected' || !newMessage.trim()}
+            >
+              Send
+            </Button>
           </form>
         </div>
         
@@ -230,7 +279,7 @@ export default function StudyRoom() {
             </Button>
           </div>
           
-          {/* Study Timer */}
+          {/* Enhanced Study Timer - Using custom useTimer hook */}
           <div className="bg-white rounded-xl shadow p-4">
             <h3 className="font-semibold mb-3">Pomodoro Timer</h3>
             <div className="text-center py-4">
@@ -253,37 +302,49 @@ export default function StudyRoom() {
                     strokeWidth="8" 
                     fill="transparent"
                     strokeDasharray={`${2 * Math.PI * 45}`}
-                    strokeDashoffset={`${2 * Math.PI * 45 * (1 - 0.6)}`}
-                    className="text-indigo-600"
+                    strokeDashoffset={`${2 * Math.PI * 45 * (1 - progress / 100)}`}
+                    className={`transition-all duration-1000 ${
+                      isCompleted ? 'text-green-600' : 'text-indigo-600'
+                    }`}
                   />
                 </svg>
                 <div className="absolute inset-0 flex items-center justify-center">
                   <div className="text-2xl font-mono font-bold text-gray-900">
-                    {String(studyTime.minutes).padStart(2, '0')}:{String(studyTime.seconds).padStart(2, '0')}
+                    {formattedTime}
                   </div>
                 </div>
               </div>
-              <div className="flex justify-center space-x-2">
+              <div className="flex justify-center space-x-2 mb-3">
                 <Button 
                   size="sm" 
-                  onClick={() => setTimerActive(!timerActive)}
-                  className={timerActive ? 'bg-red-600 hover:bg-red-700' : ''}
+                  onClick={isActive ? pause : start}
+                  className={isActive ? 'bg-red-600 hover:bg-red-700' : ''}
                 >
-                  {timerActive ? 'Pause' : 'Start'}
+                  {isActive ? 'Pause' : 'Start'}
                 </Button>
-                <Button variant="outline" size="sm">Reset</Button>
+                <Button variant="outline" size="sm" onClick={reset}>
+                  Reset
+                </Button>
               </div>
+              {isCompleted && (
+                <div className="text-sm text-green-600 font-medium">
+                  🎉 Session completed! Great job!
+                </div>
+              )}
             </div>
-            <div className="grid grid-cols-3 gap-2 text-xs">
-              <button className="p-2 text-center bg-indigo-50 text-indigo-600 rounded font-medium">
-                Pomodoro<br/>25m
-              </button>
-              <button className="p-2 text-center bg-gray-50 text-gray-600 rounded">
-                Short<br/>5m
-              </button>
-              <button className="p-2 text-center bg-gray-50 text-gray-600 rounded">
-                Long<br/>15m
-              </button>
+            
+            {/* Study Stats from custom hook */}
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <div className="grid grid-cols-2 gap-4 text-center">
+                <div>
+                  <div className="text-lg font-bold text-indigo-600">{stats.totalStudyTime}</div>
+                  <div className="text-xs text-gray-500">Total Minutes</div>
+                </div>
+                <div>
+                  <div className="text-lg font-bold text-green-600">{stats.sessionsCompleted}</div>
+                  <div className="text-xs text-gray-500">Sessions</div>
+                </div>
+              </div>
             </div>
           </div>
           
@@ -314,31 +375,6 @@ export default function StudyRoom() {
             <div className="flex space-x-2 mt-3">
               <Button variant="outline" size="sm" className="flex-1">Join Code</Button>
               <Button variant="ghost" size="sm">Copy</Button>
-            </div>
-          </div>
-          
-          {/* Quick Actions */}
-          <div className="bg-white rounded-xl shadow p-4">
-            <h3 className="font-semibold mb-3">Quick Actions</h3>
-            <div className="space-y-2">
-              <Button variant="outline" size="sm" className="w-full justify-start">
-                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                </svg>
-                Create Whiteboard
-              </Button>
-              <Button variant="outline" size="sm" className="w-full justify-start">
-                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                Share Notes
-              </Button>
-              <Button variant="outline" size="sm" className="w-full justify-start">
-                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 4V2a1 1 0 011-1h8a1 1 0 011 1v2m-9 4v10a2 2 0 002 2h6a2 2 0 002-2V8M7 8h10M9 12h6" />
-                </svg>
-                Start Poll
-              </Button>
             </div>
           </div>
         </div>
