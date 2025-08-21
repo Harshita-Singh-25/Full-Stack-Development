@@ -1,14 +1,14 @@
 // src/components/Navbar.jsx
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from './ui/Button';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function Navbar() {
-  // Dummy user data for development
-  const user = { username: 'JohnDoe', email: 'john@example.com' };
+  const { currentUser, logout } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = () => {
-    // For now, just navigate to home
+    logout();
     navigate('/');
   };
 
@@ -29,12 +29,50 @@ export default function Navbar() {
           <Link to="/room/1" className="hover:text-indigo-200 transition">
             Study Rooms
           </Link>
-          <Button variant="outline" onClick={handleLogout} className="text-white border-white hover:bg-white hover:text-indigo-600">
+          
+          {/* Profile Link with Dropdown */}
+          <div className="relative group">
+            <div className="flex items-center space-x-2 cursor-pointer">
+              <div className="w-8 h-8 rounded-full bg-indigo-400 flex items-center justify-center">
+                {currentUser?.username?.charAt(0).toUpperCase() || 'U'}
+              </div>
+              <span className="hidden md:block">{currentUser?.username || 'User'}</span>
+              <svg className="w-4 h-4 transition-transform group-hover:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
+            
+            {/* Dropdown Menu */}
+            <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+              <Link 
+                to="/profile" 
+                className="block px-4 py-2 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-600"
+              >
+                👤 Your Profile
+              </Link>
+              <Link 
+                to="/settings" 
+                className="block px-4 py-2 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-600"
+              >
+                ⚙️ Settings
+              </Link>
+              <div className="border-t border-gray-100 my-1"></div>
+              <button
+                onClick={handleLogout}
+                className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+              >
+                🚪 Sign Out
+              </button>
+            </div>
+          </div>
+          
+          <Button 
+            variant="outline" 
+            onClick={handleLogout} 
+            className="text-white border-white hover:bg-white hover:text-indigo-600 hidden md:block"
+          >
             Logout
           </Button>
-          <div className="w-8 h-8 rounded-full bg-indigo-400 flex items-center justify-center">
-            {user.username.charAt(0).toUpperCase()}
-          </div>
         </div>
       </div>
     </nav>

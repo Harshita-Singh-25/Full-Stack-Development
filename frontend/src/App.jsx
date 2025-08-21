@@ -9,6 +9,8 @@ import VoiceRoom from './pages/VoiceRoom';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import ProtectedRoute from './components/ProtectedRoute';
+import Profile from './pages/Profile';
+
 
 function App() {
   return (
@@ -44,6 +46,15 @@ function App() {
                   </ProtectedRoute>
                 } 
               />
+
+                <Route 
+                path="/profile" 
+                element={
+                  <ProtectedRoute>
+                    <Profile />
+                  </ProtectedRoute>
+                } 
+                />
             </Routes>
           </main>
           <Footer />
